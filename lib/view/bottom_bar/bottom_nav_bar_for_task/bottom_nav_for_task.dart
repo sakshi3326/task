@@ -182,7 +182,7 @@ class _BottomNavigationForTaskViewState
                           color: CommonColors.containerIconB,
                         ),
                       ),
-                label: "Inbox",
+                label: "Users",
               ),
               BottomNavigationBarItem(
                 backgroundColor: Colors.transparent,

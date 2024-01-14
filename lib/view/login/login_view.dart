@@ -21,7 +21,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final formKey = GlobalKey<FormState>();
-  String email = "";
+  String email  = "";
   String password = "";
   bool _isLoading = false;
   AuthService authService = AuthService();
@@ -121,22 +121,23 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(
                     height: 10,
                   ),
-                  Text.rich(TextSpan(
-                    text: "Don't have an account? ",
-                    style: const TextStyle(
-                        color: Colors.black, fontSize: 14),
-                    children: <TextSpan>[
-                      TextSpan(
-                          text: "Register here",
-                          style: const TextStyle(
-                              color: Colors.black,
-                              decoration: TextDecoration.underline),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              nextScreen(context, const RegisterPage());
-                            }),
-                    ],
-                  )),
+                  //don't have account
+                  // Text.rich(TextSpan(
+                  //   text: "Don't have an account? ",
+                  //   style: const TextStyle(
+                  //       color: Colors.black, fontSize: 14),
+                  //   children: <TextSpan>[
+                  //     TextSpan(
+                  //         text: "Register here",
+                  //         style: const TextStyle(
+                  //             color: Colors.black,
+                  //             decoration: TextDecoration.underline),
+                  //         recognizer: TapGestureRecognizer()
+                  //           ..onTap = () {
+                  //             nextScreen(context, const RegisterPage());
+                  //           }),
+                  //   ],
+                  // )),
                 ],
               )),
         ),
@@ -149,26 +150,49 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _isLoading = true;
       });
-      await authService
-          .loginWithUserNameandPassword(email, password)
-          .then((value) async {
-        if (value == true) {
-          QuerySnapshot snapshot =
-          await DatabaseService(uid: FirebaseAuth.instance.currentUser!.uid)
-              .gettingUserData(email);
-          // saving the values to our shared preferences
-          await HelperFunctions.saveUserLoggedInStatus(true);
-          await HelperFunctions.saveUserEmailSF(email);
-          await HelperFunctions.saveUserNameSF(snapshot.docs[0]['fullName']);
-          // ignore: use_build_context_synchronously
-          nextScreenReplace(context, const WelComeView());
+      try {
+        bool loginSuccess = await authService.loginWithUserNameandPassword(email, password);
+
+        if (loginSuccess) {
+          QuerySnapshot snapshot = await DatabaseService(uid: FirebaseAuth.instance.currentUser!.uid).gettingUserData(email);
+
+          // Check if the snapshot has documents
+          if (snapshot.docs.isNotEmpty) {
+            // Access the data
+            String design = snapshot.docs[0]['design'] ?? "";
+            String dpt = snapshot.docs.length > 1 ? snapshot.docs[1]['dpt'] ?? "" : "";
+            String userEmail = snapshot.docs.length > 2 ? snapshot.docs[2]['email'] ?? "" : "";
+            String fullName = snapshot.docs.length > 3 ? snapshot.docs[3]['fullName'] ?? "" : "";
+            String phn = snapshot.docs.length > 5 ? snapshot.docs[5]['phn'] ?? "" : "";
+
+            // saving the values to our shared preferences
+            await HelperFunctions.saveUserLoggedInStatus(true);
+            await HelperFunctions.saveUserDesignSF(design);
+            await HelperFunctions.saveUserDptSF(dpt);
+            await HelperFunctions.saveUserEmailSF(userEmail);
+            await HelperFunctions.saveUserNameSF(fullName);
+            await HelperFunctions.saveUserPhoneSF(phn);
+
+            // Navigate to the welcome view
+            nextScreenReplace(context, const WelComeView());
+          } else {
+            // Handle the case where no data is found
+            showSnackbar(context, Colors.red, "No user data found.");
+          }
         } else {
-          showSnackbar(context, Colors.red, value);
-          setState(() {
-            _isLoading = false;
-          });
+          showSnackbar(context, Colors.red, "Login failed. Please check your credentials.");
         }
-      });
+      } catch (e) {
+        // Handle any potential exceptions
+        print("Error during login: $e");
+        showSnackbar(context, Colors.red, "An error occurred during login.");
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
+
+
 }

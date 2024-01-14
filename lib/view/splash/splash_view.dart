@@ -5,6 +5,8 @@ import 'package:task/utils/local_images.dart';
 import 'package:task/utils/text_style.dart';
 import 'package:task/view/signup/register.dart';
 
+import '../login/login_view.dart';
+
 class SplashView extends StatefulWidget {
   const SplashView({Key? key}) : super(key: key);
 
@@ -21,7 +23,7 @@ class _SplashViewState extends State<SplashView> {
       const Duration(seconds: 03),
       () {
         Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const RegisterPage()),
+            MaterialPageRoute(builder: (context) => const LoginPage()),
             (Route<dynamic> route) => false);
       },
     );

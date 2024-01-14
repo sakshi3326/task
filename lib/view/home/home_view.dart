@@ -33,8 +33,10 @@ class _HomeViewState extends State<HomeView> {
 
   String startDate = "";
   String dueDate = "";
+  String time= "";
   String stage="";
   String owner="";
+  String desc="";
   List<TaskTile> taskTilesList = [];
   String _selectedGroupId = "";
   List<String> deletedTileIds = [];
@@ -58,6 +60,25 @@ class _HomeViewState extends State<HomeView> {
     setState(() {
       emails = fetchedEmails;
     });
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        if (isStartDate) {
+          startDate = selectedDate.toLocal().toString();
+        } else {
+          dueDate = selectedDate.toLocal().toString();
+        }
+      });
+    }
   }
 
   Future<void> fetchGroupNames() async {
@@ -181,6 +202,22 @@ class _HomeViewState extends State<HomeView> {
       return '';
     }
   }
+  String getDesc(String input) {
+    List<String> parts = input.split('_');
+    if (parts.length >= 7) {
+      return parts[6]; // Index 6 corresponds to "desc"
+    } else {
+      return '';
+    }
+  }
+  String getTime(String input) {
+    List<String> parts = input.split('_');
+    if (parts.length >= 8) {
+      return parts[7]; // Index 6 corresponds to "desc"
+    } else {
+      return '';
+    }
+  }
 
 
   gettingUserData() async {
@@ -209,10 +246,7 @@ class _HomeViewState extends State<HomeView> {
       backgroundColor: CommonColors.whiteColor,
       appBar: AppBarView(
         title: "Create Task",
-        firstIcon: Icons.category_outlined,
-        onBackPress: () {},
-        secondIcon: Icons.notifications,
-        onNextPress: () {},
+
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -220,95 +254,8 @@ class _HomeViewState extends State<HomeView> {
               const EdgeInsets.only(top: 20, left: 26, right: 26, bottom: 10),
           child: Column(
             children: [
-              Container(
-                height: 250,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade200,
-                      Colors.blue.shade300,
-                      Colors.blue,
-                    ],
-                  ),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Tasks summary",
-                        style: CommonStyle.getRalewayFont(
-                          color: CommonColors.whiteColor,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        "${taskTilesList.length} Tasks",
-                        style: CommonStyle.getRalewayFont(
-                          color: CommonColors.textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text('Features'),
-                      Text('1. Create tasks'),
-                      Text('2. See the tasks assigned to you'),
-                      Text('3. Delete a task by swiping left to right'),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 36),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                   bottom: 04),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    "Progress",
-                                    style: CommonStyle.getRalewayFont(
-                                      color: CommonColors.textColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 60),
-                                  Text(
-                                    getProgressText(),
-                                    style: CommonStyle.getRalewayFont(
-                                      color: CommonColors.textColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
 
-
-                                ],
-                              ),
-                            ),
-                            LinearPercentIndicator(
-                              width: 160,
-                              lineHeight: 08,
-                              percent: calculateProgress(),
-                              backgroundColor: CommonColors.whiteColor.withOpacity(0.2),
-                              progressColor: CommonColors.whiteColor,
-                              barRadius: const Radius.circular(15),
-                            ),
-
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
+             SizedBox(height: 20,),
              //Task heading
              Padding(
                padding: const EdgeInsets.only(top: 20, bottom: 10),
@@ -316,7 +263,7 @@ class _HomeViewState extends State<HomeView> {
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
                    Text(
-                     "Tasks",
+                     "Schedule Tasks",
                      style: CommonStyle.getRalewayFont(
                        color: CommonColors.blackColor,
                        fontWeight: FontWeight.w700,
@@ -381,11 +328,13 @@ class _HomeViewState extends State<HomeView> {
                     (taskName) => TaskTile(
                    startDate: getStartDate(taskName),
                   dueDate: getDueDate(taskName),
+                  time: getTime(taskName),
                   owner: getOwner(taskName),
                   stage: getStage(taskName),
                   taskId: getId(taskName),
                  taskName: getTaskName(taskName),
                   userName: snapshot.data['fullName'],
+                  desc: getDesc(taskName),
                   onAddMember: () {
                     _showAddMemberDialog(context, getId(taskName));
                   },
@@ -436,155 +385,193 @@ class _HomeViewState extends State<HomeView> {
                 "Create a Task",
                 textAlign: TextAlign.left,
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Dropdown for selecting a group name
-                    DropdownButtonFormField<String>(
-                      value: selectedGroupName,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedGroupName = value!;
-                        });
-                      },
-                      items: groupNames.map((groupName) {
-                        return DropdownMenuItem<String>(
-                          value: groupName,
-                          child: Text(groupName),
-                        );
-                      }).toList(),
-                      decoration: InputDecoration(
-                        labelText: 'Select a Project',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _isLoading == true
-                        ? Center(
-                      child: CircularProgressIndicator(
-                          color: Theme.of(context).primaryColor),
-                    )
-                        : TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          taskName = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Task Name',
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: Theme.of(context).primaryColor),
-                            borderRadius: BorderRadius.circular(20)),
-                        errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
-                            borderRadius: BorderRadius.circular(20)),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+              content: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.98, // Set width here
+                height: MediaQuery.of(context).size.height * 0.98,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Dropdown for selecting a group name
+                      DropdownButtonFormField<String>(
+                        value: selectedGroupName,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedGroupName = value!;
+                          });
+                        },
+                        items: groupNames.map((groupName) {
+                          return DropdownMenuItem<String>(
+                            value: groupName,
+                            child: Text(groupName),
+                          );
+                        }).toList(),
+                        decoration: InputDecoration(
+                          labelText: 'Select a Project',
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          startDate = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Start Date',
-                        enabledBorder: OutlineInputBorder(
+                      const SizedBox(height: 10),
+                      _isLoading == true
+                          ? Center(
+                        child: CircularProgressIndicator(
+                            color: Theme.of(context).primaryColor),
+                      )
+                          : TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            taskName = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Task Name',
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(20)),
+                          errorBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Colors.red),
+                              borderRadius: BorderRadius.circular(20)),
+                          focusedBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor),
-                            borderRadius: BorderRadius.circular(20)),
-                        errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
-                            borderRadius: BorderRadius.circular(20)),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                         dueDate = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Due Date',
-                        enabledBorder: OutlineInputBorder(
+                      const SizedBox(height: 10),
+                      TextField(
+                        readOnly: true,
+                        onTap: () => _selectDate(context, true),
+                        controller: TextEditingController(text: startDate),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Start Date',
+                          enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor),
-                            borderRadius: BorderRadius.circular(20)),
-                        errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
-                            borderRadius: BorderRadius.circular(20)),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          stage = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Stage',
-                        enabledBorder: OutlineInputBorder(
+                      const SizedBox(height: 10),
+                      TextField(
+                        readOnly: true,
+                        onTap: () => _selectDate(context, false),
+                        controller: TextEditingController(text: dueDate),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Due Date',
+                          enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor),
-                            borderRadius: BorderRadius.circular(20)),
-                        errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
-                            borderRadius: BorderRadius.circular(20)),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          owner = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Created By',
-                        enabledBorder: OutlineInputBorder(
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            time = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Estimated Time',
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(20)),
+                          errorBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Colors.red),
+                              borderRadius: BorderRadius.circular(20)),
+                          focusedBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor),
-                            borderRadius: BorderRadius.circular(20)),
-                        errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
-                            borderRadius: BorderRadius.circular(20)),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: stage.isNotEmpty ? stage : "TODO", // Set a default value if stage is empty
+                        onChanged: (val) {
+                          setState(() {
+                            stage = val!;
+                          });
+                        },
+                        items: ["TODO", "In Progress", "Completed", "Pending"].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Stage',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          // other decoration properties...
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            owner = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Task Owner',
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(20)),
+                          errorBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Colors.red),
+                              borderRadius: BorderRadius.circular(20)),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            desc = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Description',
+                          enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(20)),
+                          errorBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Colors.red),
+                              borderRadius: BorderRadius.circular(20)),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(vertical: 50),
+                        ),
+                      ),
 
-                  ],
+
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -612,8 +599,10 @@ class _HomeViewState extends State<HomeView> {
                         taskName,
                         startDate,
                         dueDate,
+                        time,
                         stage,
-                        owner
+                        owner,
+                        desc
                       )
                           .whenComplete(() {
                         _isLoading = false;
@@ -668,77 +657,96 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  void _showAddMemberDialog(BuildContext context, String groupId) {
-    TextEditingController emailController = TextEditingController();
-    List<String> uniqueEmails = emails.toSet().toList(); // Remove duplicates
-
-    String selectedEmail = uniqueEmails.isNotEmpty ? uniqueEmails[0] : ''; // Set default value
-
+  void _showAddMemberDialog(BuildContext context, String taskId) {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Member"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Modify this TextField to a DropdownButtonFormField
-              DropdownButtonFormField<String>(
-                value: selectedEmail,
-                onChanged: (value) {
-                  setState(() {
-                    selectedEmail = value!;
-                  });
-                },
-                items: uniqueEmails.map<DropdownMenuItem<String>>((String email) {
-                  return DropdownMenuItem<String>(
-                    value: email,
-                    child: Text(email),
-                  );
-                }).toList(),
-                decoration: InputDecoration(
-                  labelText: 'Email',
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: DatabaseService().getAllEmailsAndfullNames(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text("Error: ${snapshot.error}");
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Text("No data available");
+            } else {
+              List<Map<String, dynamic>> usersData = snapshot.data!;
+              String selectedEmail = usersData.isNotEmpty ? usersData[0]['email'] : '';
+
+              return AlertDialog(
+                title: const Text("Add Member"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedEmail,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedEmail = value!;
+                        });
+                      },
+                      items: usersData.map<DropdownMenuItem<String>>((userData) {
+                        return DropdownMenuItem<String>(
+                          value: userData['email'],
+                          child: Text("${userData['fullName']} "),
+                        );
+                      }).toList(),
+                      decoration: InputDecoration(
+                        labelText: 'Member',
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (selectedEmail.isNotEmpty) {
-                  bool memberAdded = await addMemberToTask(taskName, selectedEmail, startDate,dueDate,stage,owner);
+                actions: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (selectedEmail.isNotEmpty) {
+                        bool memberAdded = await addMemberToTask(
+                          taskId,
+                          selectedEmail,
+                          startDate,
+                          dueDate,
+                          time,
+                          stage,
+                          owner,
+                          desc,
+                        );
 
-                  if (memberAdded) {
-                    // Show a Snackbar if the member is added successfully
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Member added successfully."),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                        if (memberAdded) {
+                          // Show a Snackbar if the member is added successfully
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Member added successfully."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
 
-                    // Close the dialog
-                    Navigator.of(context).pop();
-                  } else {
-                    // Handle failure, e.g., show an error message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Failed to add member."),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
+                          // Close the dialog
+                          Navigator.of(context).pop();
+                        } else {
+                          // Handle failure, e.g., show an error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Failed to add member."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Add"),
+                  ),
+                ],
+              );
+            }
+          },
         );
       },
     );
@@ -746,8 +754,7 @@ class _HomeViewState extends State<HomeView> {
 
 
 
-
-  Future<bool> addMemberToTask(String taskId, String email,String startDate, String dueDate, String owner, String stage) async {
+  Future<bool> addMemberToTask(String taskId, String email,String startDate, String dueDate, String time,String owner, String stage,String desc) async {
     try {
       // Fetch the user UID based on the provided email
       String? newMemberUid = await DatabaseService().getUidByEmail(email);
@@ -761,7 +768,9 @@ class _HomeViewState extends State<HomeView> {
           stage,
           startDate,
           dueDate,
-          owner
+          time,
+          owner,
+          desc
         );
 
         return true;

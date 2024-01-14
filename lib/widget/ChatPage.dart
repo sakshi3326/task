@@ -10,10 +10,23 @@ class ChatPage extends StatefulWidget {
   final String groupId;
   final String groupName;
   final String userName;
+  final String startDate;
+  final String dueDate;
+  final String stage;
+  final String desc;
+  final String owner;
+  final String time;
+
   const ChatPage(
       {Key? key,
         required this.groupId,
         required this.groupName,
+        required this.startDate,
+        required this.dueDate,
+        required this.desc,
+        required this.stage,
+        required this.owner,
+        required this.time,
         required this.userName})
       : super(key: key);
 
@@ -62,6 +75,12 @@ class _ChatPageState extends State<ChatPage> {
                       groupId: widget.groupId,
                       groupName: widget.groupName,
                       adminName: admin,
+                      startDate: widget.startDate,
+
+                      stage: widget.stage,
+                      desc: widget.desc,
+                      dueDate: widget.dueDate,
+                      owner: widget.owner,
                     ));
               },
               icon: const Icon(Icons.info))

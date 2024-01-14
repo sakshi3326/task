@@ -9,12 +9,23 @@ class GroupInfo extends StatefulWidget {
   final String groupId;
   final String groupName;
   final String adminName;
-  const GroupInfo(
-      {Key? key,
-        required this.adminName,
-        required this.groupName,
-        required this.groupId})
-      : super(key: key);
+  final String startDate;
+  final String dueDate;
+  final String desc;
+  final String stage;
+  final String owner;
+
+  const GroupInfo({
+    Key? key,
+    required this.adminName,
+    required this.groupName,
+    required this.startDate,
+    required this.dueDate,
+    required this.desc,
+    required this.stage,
+    required this.groupId,
+    required this.owner
+  }) : super(key: key);
 
   @override
   State<GroupInfo> createState() => _GroupInfoState();
@@ -22,6 +33,7 @@ class GroupInfo extends StatefulWidget {
 
 class _GroupInfoState extends State<GroupInfo> {
   Stream? members;
+
   @override
   void initState() {
     getMembers();
@@ -53,62 +65,116 @@ class _GroupInfoState extends State<GroupInfo> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).primaryColor,
-        title: const Text("Group Info"),
-        actions: [
-          IconButton(
-              onPressed: () {
-                showDialog(
-                    barrierDismissible: false,
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text("Exit"),
-                        content:
-                        const Text("Are you sure you exit the group? "),
-                        actions: [
-                          IconButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: const Icon(
-                              Icons.cancel,
-                              color: Colors.red,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () async {
-                              DatabaseService(
-                                  uid: FirebaseAuth
-                                      .instance.currentUser!.uid)
-                                  .toggleGroupJoin(
-                                  widget.groupId,
-                                  getName(widget.adminName),
-                                  widget.groupName)
-                                  .whenComplete(() {
-                                nextScreenReplace(context, const UpcomingScheduleListView());
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.done,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      );
-                    });
-              },
-              icon: const Icon(Icons.exit_to_app))
-        ],
+        title: Text(widget.groupName),
+        // actions: [
+        //   IconButton(
+        //     onPressed: () {
+        //       showDialog(
+        //         barrierDismissible: false,
+        //         context: context,
+        //         builder: (context) {
+        //           return AlertDialog(
+        //             title: const Text("Exit"),
+        //             content: const Text("Are you sure you want to exit the group?"),
+        //             actions: [
+        //               IconButton(
+        //                 onPressed: () {
+        //                   Navigator.pop(context);
+        //                 },
+        //                 icon: const Icon(
+        //                   Icons.cancel,
+        //                   color: Colors.red,
+        //                 ),
+        //               ),
+        //               IconButton(
+        //                 onPressed: () async {
+        //                   DatabaseService(
+        //                     uid: FirebaseAuth.instance.currentUser!.uid,
+        //                   ).toggleGroupJoin(
+        //                     widget.groupId,
+        //                     getName(widget.adminName),
+        //                     widget.groupName,
+        //                     widget.owner,
+        //                     widget.stage,
+        //                     widget.startDate,
+        //                     widget.dueDate,
+        //                     widget.desc
+        //                   ).whenComplete(() {
+        //                     nextScreenReplace(
+        //                       context,
+        //                       const UpcomingScheduleListView(),
+        //                     );
+        //                   });
+        //                 },
+        //                 icon: const Icon(
+        //                   Icons.done,
+        //                   color: Colors.green,
+        //                 ),
+        //               ),
+        //             ],
+        //           );
+        //         },
+        //       );
+        //     },
+        //     icon: const Icon(Icons.exit_to_app),
+        //   ),
+        // ],
       ),
       body: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Row for Group Name
+            Row(
+              children: [
+                Text(
+                  "Group Name: ${widget.groupName}",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Row for Start Date and Due Date
+            Row(
+              children: [
+                Text("Start Date: ${widget.startDate}"),
+                const SizedBox(width: 20),
+
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text("Due Date: ${widget.dueDate}"),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text("Stage: ${widget.stage}"),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text("Owner: ${widget.owner}"),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text("Description: ${widget.desc}"),
+              ],
+            ),
+            // Admin Tile
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Theme.of(context).primaryColor.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(30),
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -118,12 +184,12 @@ class _GroupInfoState extends State<GroupInfo> {
                     child: Text(
                       widget.groupName.substring(0, 1).toUpperCase(),
                       style: const TextStyle(
-                          fontWeight: FontWeight.w500, color: Colors.white),
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  const SizedBox(
-                    width: 20,
-                  ),
+                  const SizedBox(width: 20),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -131,15 +197,16 @@ class _GroupInfoState extends State<GroupInfo> {
                         "Group: ${widget.groupName}",
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
-                      const SizedBox(
-                        height: 5,
-                      ),
-                      Text("Admin: ${getName(widget.adminName)}")
+                      const SizedBox(height: 5),
+                      Text("Admin: ${getName(widget.adminName)}"),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // Member List
             memberList(),
           ],
         ),
@@ -159,8 +226,7 @@ class _GroupInfoState extends State<GroupInfo> {
                 shrinkWrap: true,
                 itemBuilder: (context, index) {
                   return Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
                     child: ListTile(
                       leading: CircleAvatar(
                         radius: 30,
@@ -170,9 +236,10 @@ class _GroupInfoState extends State<GroupInfo> {
                               .substring(0, 1)
                               .toUpperCase(),
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       title: Text(getName(snapshot.data['members'][index])),
@@ -193,9 +260,10 @@ class _GroupInfoState extends State<GroupInfo> {
           }
         } else {
           return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).primaryColor,
-              ));
+            child: CircularProgressIndicator(
+              color: Theme.of(context).primaryColor,
+            ),
+          );
         }
       },
     );

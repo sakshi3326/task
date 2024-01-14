@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 import '../../helper/helper_function.dart';
 import '../../service/database_service.dart';
-
+import '../../widget/widgets.dart';
+import '../signup/register.dart';
 
 class AllUsers extends StatefulWidget {
   const AllUsers({Key? key}) : super(key: key);
@@ -15,51 +15,29 @@ class AllUsers extends StatefulWidget {
 
 class _AllUsersState extends State<AllUsers> {
   FirebaseAuth _auth = FirebaseAuth.instance;
-  String? fullName;
-  String? email;
-  List<String> allUserEmails = [];
-
+  List<Map<String, dynamic>> allUserData = [];
+  String specificUserEmail = "adminuser1@gmail.com";
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    fetchAllUsersData();
   }
 
-  void fetchUserData() async {
+  void fetchAllUsersData() async {
     try {
-      User? user = _auth.currentUser;
+      List<Map<String, dynamic>> usersData =
+      await DatabaseService().getAllEmailsAndfullNames();
 
-      if (user != null) {
-        // Use the helper functions to get stored values
-        String? storedUserName = await HelperFunctions.getUserNameFromSF();
-        String? storedUserEmail = await HelperFunctions.getUserEmailFromSF();
-
-        // Set the values to state
-        setState(() {
-          fullName = storedUserName ?? "Loading...";
-          email = storedUserEmail ?? "Loading...";
-        });
-
-        // Fetch all user emails from the database
-        fetchAllUserEmails();
-      }
-    } catch (e) {
-      print("Error fetching user data: $e");
-    }
-  }
-
-  void fetchAllUserEmails() async {
-    try {
-      // Use your DatabaseService to get all emails
-      List<String> emails = await DatabaseService().getAllEmails();
-
-      // Set the state with the list of emails
       setState(() {
-        allUserEmails = emails;
+        allUserData = usersData;
       });
     } catch (e) {
-      print("Error fetching all user emails: $e");
+      print("Error fetching all user data: $e");
     }
+  }
+
+  bool shouldShowFAB() {
+    return _auth.currentUser?.email == specificUserEmail;
   }
 
   @override
@@ -67,30 +45,50 @@ class _AllUsersState extends State<AllUsers> {
     return Scaffold(
       appBar: AppBar(
         title: Text('All Available Users'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (allUserEmails.isNotEmpty)
-              Expanded(
-                child: ListView.builder(
-                  itemCount: allUserEmails.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(allUserEmails[index]),
-                    );
-                  },
-                ),
-              ),
-            if (allUserEmails.isEmpty)
-              Text(
-                'No users available.',
-                style: TextStyle(fontSize: 18),
-              ),
-          ],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
       ),
+      body: Center(
+        child: allUserData.isNotEmpty
+            ? Padding(
+          padding: const EdgeInsets.only(top: 20.0),
+          child: ListView.builder(
+            itemCount: allUserData.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                leading: CircleAvatar(
+                  child: Icon(Icons.person),
+                ),
+                title: Text(allUserData[index]['fullName'] ?? ""),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Department: ${allUserData[index]['dpt'] ?? ""}"),
+                    Text("Email: ${allUserData[index]['email'] ?? ""}"),
+                  ],
+                ),
+              );
+            },
+          ),
+        )
+            : Text(
+          'No users available.',
+          style: TextStyle(fontSize: 18),
+        ),
+      ),
+      floatingActionButton: shouldShowFAB()
+          ? FloatingActionButton(
+        onPressed: () {
+          // Handle FAB button press
+          nextScreen(context, const RegisterPage());
+        },
+        child: Icon(Icons.add),
+      )
+          : null,
     );
   }
 }

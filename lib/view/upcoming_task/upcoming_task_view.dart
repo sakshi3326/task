@@ -19,10 +19,8 @@ class _UpcomingTaskViewState extends State<UpcomingTaskView> {
       backgroundColor: CommonColors.whiteColor,
       appBar: AppBarView(
         title: "Projects",
-        firstIcon: Icons.category_outlined,
-        onBackPress: () {
-          Navigator.pop(context);
-        },
+
+
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -30,46 +28,12 @@ class _UpcomingTaskViewState extends State<UpcomingTaskView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                height: 250,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade200,
-                      Colors.blue.shade300,
-                      Colors.blue,
-                    ],
-                  ),
-                ),
-                child: Padding(
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Projects summary",
-                        style: CommonStyle.getRalewayFont(
-                          color: CommonColors.whiteColor,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
 
-                      Text('Features'),
-                      Text('1. Create Projects'),
-                      Text('2. See the Projects assigned to you'),
-                      Text('3. Delete a Project by swiping left to right'),
-
-                    ],
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(top: 20.0),
+                child: UpcomingScheduleListView(
+                  onTap: (int index) {},
                 ),
-              ),
-              UpcomingScheduleListView(
-                onTap: (int index) {},
               ),
             ],
           ),

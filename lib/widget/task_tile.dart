@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../service/database_service.dart';
 
 class TaskTile extends StatefulWidget {
@@ -8,10 +9,12 @@ class TaskTile extends StatefulWidget {
   final Function onAddMember;
   final Function onDelete;
   final String selectedGroupName;
-  final String startDate;
-  final String dueDate;
-  final String stage;
-  final String owner;
+   String startDate;
+   String dueDate;
+   String time;
+   String stage;
+   String owner;
+   String desc;
 
 
 
@@ -25,8 +28,10 @@ class TaskTile extends StatefulWidget {
      required this.selectedGroupName,
      required this.startDate,
      required this.dueDate,
+     required this.time,
      required this.stage,
      required this.owner,
+     required this.desc,
 
   }) : super(key: key);
 
@@ -36,8 +41,39 @@ class TaskTile extends StatefulWidget {
 
 class _TaskTileState extends State<TaskTile> {
 
+  late SharedPreferences _prefs;
+  late bool _isDismissed;
+  void initState() {
+    super.initState();
+    _initPrefs();
+    _fetchTaskDetails();
+  }
 
+  // Fetch the latest task details from the database
+  Future<void> _fetchTaskDetails() async {
+    try {
+      // Assuming you have a method in your DatabaseService to fetch group details
+      Map<String, dynamic> taskDetails = await DatabaseService().getTaskDetails(widget.taskId);
 
+      setState(() {
+        // Update widget's state with the latest data
+        widget.taskName = taskDetails['taskName'];
+        widget.startDate = taskDetails['startDate'];
+        widget.dueDate = taskDetails['dueDate'];
+        widget.time = taskDetails['time'];
+        widget.owner = taskDetails['owner'];
+        widget.stage = taskDetails['stage'];
+        widget.desc = taskDetails['desc'];
+      });
+    } catch (error) {
+      print('Error fetching group details: $error');
+    }
+  }
+
+  Future<void> _initPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+    _isDismissed = _prefs.getBool(widget.taskId) ?? false;
+  }
 
 
   @override
@@ -60,6 +96,10 @@ class _TaskTileState extends State<TaskTile> {
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
           widget.onDelete();
+          _prefs.setBool(widget.taskId, true); // Mark as dismissed in SharedPreferences
+          setState(() {
+            _isDismissed = true;
+          });
         }
       },
       child: GestureDetector(
@@ -95,7 +135,7 @@ class _TaskTileState extends State<TaskTile> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               // subtitle: Text(
-              //   "This Project is created by ${widget.userName}",
+              //   "This Project is created by ${widget.a}",
               //   style: const TextStyle(fontSize: 13),
               // ),
             ),
@@ -111,7 +151,7 @@ class _TaskTileState extends State<TaskTile> {
       'Add Member in ${widget.taskName}',
       // 'Members List for ${widget.taskName}',
       'Info for ${widget.taskName}',
-      'Edit ${widget.taskName}',
+      // 'Edit ${widget.taskName}',
     ];
 
     await showMenu(
@@ -135,8 +175,6 @@ class _TaskTileState extends State<TaskTile> {
           _showMembersList(context);
         } else if (result == 'Info for ${widget.taskName}') {
           _showTaskInfoPopup(context);
-        } else if (result == 'Edit ${widget.taskName}') {
-          _editTaskInfoPopup(context);
         } else {
           // Handle other options
         }
@@ -181,18 +219,22 @@ class _TaskTileState extends State<TaskTile> {
       builder: (context) {
         return AlertDialog(
           title: Text('Task Information'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoRow('Task Name', widget.taskName),
-              _buildInfoRow('Project Name', widget.selectedGroupName),
-              _buildInfoRow('Start Date', widget.startDate),
-              _buildInfoRow('Due Date', widget.dueDate),
-              _buildInfoRow('Stage', widget.stage),
-              _buildInfoRow('Created by', widget.owner),
-              // Add other fields for task information here
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Task Name', widget.taskName),
+                _buildInfoRow('Project Name', widget.selectedGroupName),
+                _buildInfoRow('Start Date', widget.startDate),
+                _buildInfoRow('Due Date', widget.dueDate),
+                _buildInfoRow('Estimated time', widget.time),
+                _buildInfoRow('Stage', widget.stage),
+                _buildInfoRow('Task Owner', widget.owner),
+                _buildInfoRow('Description', widget.desc),
+                // Add other fields for task information here
+              ],
+            ),
           ),
           actions: [
             ElevatedButton(
@@ -200,6 +242,15 @@ class _TaskTileState extends State<TaskTile> {
                 Navigator.of(context).pop();
               },
               child: const Text('OK'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Close the current dialog
+                Navigator.of(context).pop();
+                // Open the edit dialog
+                _editTaskInfoPopup(context);
+              },
+              child: const Text('Edit'),
             ),
           ],
         );
@@ -229,25 +280,33 @@ class _TaskTileState extends State<TaskTile> {
     );
   }
 
-
-  void _editTaskInfoPopup(BuildContext context) {
+  void _editTaskInfoPopup(BuildContext context) async {
     TextEditingController taskNameController = TextEditingController(text: widget.taskName);
-
+    TextEditingController startDateController = TextEditingController(text: widget.startDate);
+    TextEditingController dueDateController = TextEditingController(text: widget.dueDate);
+    TextEditingController timeController = TextEditingController(text: widget.time);
+    TextEditingController ownerController = TextEditingController(text: widget.owner);
+    TextEditingController stageController = TextEditingController(text: widget.stage);
+    TextEditingController descController = TextEditingController(text: widget.desc);
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text('Edit Task Details'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: taskNameController,
-                decoration: InputDecoration(labelText: 'Task Name'),
-              ),
-
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: taskNameController, decoration: InputDecoration(labelText: 'Task Name')),
+                TextField(controller: startDateController, decoration: InputDecoration(labelText: 'Start Date')),
+                TextField(controller: dueDateController, decoration: InputDecoration(labelText: 'Due Date')),
+                TextField(controller: timeController, decoration: InputDecoration(labelText: 'Time')),
+                TextField(controller: ownerController, decoration: InputDecoration(labelText: 'Owner')),
+                TextField(controller: stageController, decoration: InputDecoration(labelText: 'Stage')),
+                TextField(controller: descController, decoration: InputDecoration(labelText: 'Description')),
+              ],
+            ),
           ),
           actions: [
             ElevatedButton(
@@ -258,13 +317,28 @@ class _TaskTileState extends State<TaskTile> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // Update task details in the UI
+                // Update the widget's state
                 setState(() {
                   widget.taskName = taskNameController.text.trim();
+                  widget.startDate = startDateController.text.trim();
+                  widget.dueDate = dueDateController.text.trim();
+                  widget.time = timeController.text.trim();
+                  widget.owner = ownerController.text.trim();
+                  widget.stage = stageController.text.trim();
+                  widget.desc = descController.text.trim();
                 });
 
-                // Update task details in the database
-                await DatabaseService().updateTaskDetails(widget.taskId, widget.taskName);
+                // Update the details in the database
+                await DatabaseService().updateTaskDetails(
+                  widget.taskId,
+                  widget.taskName,
+                  widget.startDate,
+                  widget.dueDate,
+                  widget.time,
+                  widget.owner,
+                  widget.stage,
+                  widget.desc,
+                );
 
                 // Close the dialog
                 Navigator.of(context).pop();
@@ -277,6 +351,7 @@ class _TaskTileState extends State<TaskTile> {
     );
   }
 
+  // Add an Edit popup dialog
 
   Rect _getTapPosition(RenderBox overlay) {
     final RenderBox referenceBox = context.findRenderObject() as RenderBox;

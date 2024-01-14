@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helper/helper_function.dart';
+import '../../service/database_service.dart';
 
 class UserInfo extends StatefulWidget {
   const UserInfo({Key? key}) : super(key: key);
@@ -16,20 +16,13 @@ class _UserInfoState extends State<UserInfo> {
   String? fullName;
   String? email;
   String? phone;
-  String? designation;
-  String? employeeId;
-  String? department;
-
-  TextEditingController phoneController = TextEditingController();
-  TextEditingController designationController = TextEditingController();
-  TextEditingController employeeIdController = TextEditingController();
-  TextEditingController departmentController = TextEditingController();
+  String? dpt;
+  String? design;
 
   @override
   void initState() {
     super.initState();
     fetchUserData();
-    fetchLocallySavedData();
   }
 
   void fetchUserData() async {
@@ -37,14 +30,22 @@ class _UserInfoState extends State<UserInfo> {
       User? user = _auth.currentUser;
 
       if (user != null) {
-        // Use the helper functions to get stored values
-        String? storedUserName = await HelperFunctions.getUserNameFromSF();
-        String? storedUserEmail = await HelperFunctions.getUserEmailFromSF();
+        String? userEmail = user.email;
 
-        // Set the values to state
+        String? storedUserName = await HelperFunctions.getUserNameFromSF();
+        String? storedUserPhone = await HelperFunctions.getUserPhoneFromSF();
+        String? storedUserDesign = await HelperFunctions.getUserDesignFromSF();
+        String? storedUserDpt = await HelperFunctions.getUserDptFromSF();
+
+        Map<String, dynamic>? userInfo =
+        await DatabaseService().getUserInfoByEmail(userEmail ?? "");
+
         setState(() {
-          fullName = storedUserName ?? "Loading...";
-          email = storedUserEmail ?? "Loading...";
+          fullName = userInfo?['fullName'] ?? storedUserName ?? "Loading...";
+          email = userEmail ?? "Loading...";
+          phone = userInfo?['phn'] ?? storedUserPhone ?? "Loading...";
+          dpt = userInfo?['dpt'] ?? storedUserDpt ?? "Loading...";
+          design = userInfo?['design'] ?? storedUserDesign ?? "Loading...";
         });
       }
     } catch (e) {
@@ -52,20 +53,78 @@ class _UserInfoState extends State<UserInfo> {
     }
   }
 
-  void fetchLocallySavedData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      phone = prefs.getString('phone') ?? "";
-      designation = prefs.getString('designation') ?? "";
-      employeeId = prefs.getString('employeeId') ?? "";
-      department = prefs.getString('department') ?? "";
-    });
+  void _editUserInfo() async {
+    TextEditingController fullNameController = TextEditingController(text: fullName);
+    TextEditingController phoneController = TextEditingController(text: phone);
+    TextEditingController dptController = TextEditingController(text: dpt);
+    TextEditingController designController = TextEditingController(text: design);
 
-    // Update the corresponding text fields
-    phoneController.text = phone!;
-    designationController.text = designation!;
-    employeeIdController.text = employeeId!;
-    departmentController.text = department!;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit User Information'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: fullNameController,
+                decoration: InputDecoration(labelText: 'Full Name'),
+              ),
+              TextFormField(
+                controller: phoneController,
+                decoration: InputDecoration(labelText: 'Phone'),
+              ),
+              TextFormField(
+                controller: dptController,
+                decoration: InputDecoration(labelText: 'Department'),
+              ),
+              TextFormField(
+                controller: designController,
+                decoration: InputDecoration(labelText: 'Designation'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Validate and update the values
+                String updatedFullName = fullNameController.text;
+                String updatedPhone = phoneController.text;
+                String updatedDpt = dptController.text;
+                String updatedDesign = designController.text;
+
+                // Update the UI
+                setState(() {
+                  fullName = updatedFullName;
+                  phone = updatedPhone;
+                  dpt = updatedDpt;
+                  design = updatedDesign;
+                });
+
+                // Update the values in the database
+                await DatabaseService().updateUserInfo(
+                  email!,
+                  updatedFullName,
+                  updatedPhone,
+                  updatedDpt,
+                  updatedDesign,
+                );
+
+                Navigator.pop(context);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -73,78 +132,46 @@ class _UserInfoState extends State<UserInfo> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Your Personal Information'),
+        backgroundColor: Colors.blue,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: _editUserInfo,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              elevation: 5,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Full Name: $fullName',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'Email: $email',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ],
-                ),
-              ),
+            Text(
+              'Full Name: $fullName',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
-            // Editable text fields
-            TextField(
-              controller: phoneController,
-              decoration: InputDecoration(labelText: 'Phone'),
+            SizedBox(height: 10),
+            Text(
+              'Email: $email',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
-            TextField(
-              controller: designationController,
-              decoration: InputDecoration(labelText: 'Designation'),
+            SizedBox(height: 10),
+            Text(
+              'Phone: $phone',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
-            TextField(
-              controller: employeeIdController,
-              decoration: InputDecoration(labelText: 'Employee ID'),
+            SizedBox(height: 10),
+            Text(
+              'Department: $dpt',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
-            TextField(
-              controller: departmentController,
-              decoration: InputDecoration(labelText: 'Department'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Save entered values locally
-                saveLocally();
-              },
-              style: ElevatedButton.styleFrom(
-                primary: Colors.blue,
-                textStyle: TextStyle(fontSize: 16),
-              ),
-              child: Text('Save'),
+            SizedBox(height: 10),
+            Text(
+              'Designation: $design',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
           ],
         ),
       ),
     );
-  }
-
-  void saveLocally() async {
-    // Save the entered values locally
-    phone = phoneController.text;
-    designation = designationController.text;
-    employeeId = employeeIdController.text;
-    department = departmentController.text;
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('phone', phone!);
-    prefs.setString('designation', designation!);
-    prefs.setString('employeeId', employeeId!);
-    prefs.setString('department', department!);
   }
 }

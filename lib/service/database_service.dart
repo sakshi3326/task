@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class DatabaseService {
   final String? uid;
   DatabaseService({this.uid});
-
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // reference for our collections
   final CollectionReference userCollection =
   FirebaseFirestore.instance.collection("users");
@@ -13,6 +13,124 @@ class DatabaseService {
   FirebaseFirestore.instance.collection("tasks");
 
 
+  Future<Map<String, dynamic>> getGroupDetails(String groupId) async {
+    try {
+      DocumentSnapshot documentSnapshot = await _firestore.collection('groups').doc(groupId).get();
+      return documentSnapshot.data() as Map<String, dynamic>;
+    } catch (error) {
+      print('Error fetching group details: $error');
+      throw error;
+    }
+  }
+
+
+  Future<void> updateGroupDetails(
+      String groupId,
+      String groupName,
+      String startDate,
+      String dueDate,
+      String time,
+      String owner,
+      String stage,
+      String desc,
+      ) async {
+    try {
+      await _firestore.collection('groups').doc(groupId).update({
+        'groupName': groupName,
+        'startDate': startDate,
+        'dueDate': dueDate,
+        'time': time,
+        'owner': owner,
+        'stage': stage,
+        'desc': desc,
+      });
+    } catch (error) {
+      print('Error updating group details: $error');
+      throw error;
+    }
+  }
+
+  Future<void> updateTaskDetails(
+      String taskId,
+      String taskName,
+      String startDate,
+      String dueDate,
+      String time,
+      String owner,
+      String stage,
+      String desc,
+      ) async {
+    try {
+      await _firestore.collection('tasks').doc(taskId).update({
+        'taskName': taskName,
+        'startDate': startDate,
+        'dueDate': dueDate,
+        'time': time,
+        'owner': owner,
+        'stage': stage,
+        'desc': desc,
+      });
+    } catch (error) {
+      print('Error updating task details: $error');
+      throw error;
+    }
+  }
+
+  Future<Map<String, dynamic>> getTaskDetails(String taskId) async {
+    try {
+      DocumentSnapshot documentSnapshot = await _firestore.collection('tasks').doc(taskId).get();
+      return documentSnapshot.data() as Map<String, dynamic>;
+    } catch (error) {
+      print('Error fetching task details: $error');
+      throw error;
+    }
+  }
+  // Update user information in the database
+  Future<void> updateUserInfo(
+      String email,
+      String updatedFullName,
+      String updatedPhone,
+      String updatedDpt,
+      String updatedDesign,
+      ) async {
+    try {
+      // Get the user document reference by email
+      QuerySnapshot snapshot =
+      await userCollection.where("email", isEqualTo: email).limit(1).get();
+
+      if (snapshot.docs.isNotEmpty) {
+        // Update the user information in the database
+        DocumentReference userDocumentReference = snapshot.docs[0].reference;
+        await userDocumentReference.update({
+          "fullName": updatedFullName,
+          "phn": updatedPhone,
+          "dpt": updatedDpt,
+          "design": updatedDesign,
+        });
+      }
+    } catch (e) {
+      print("Error updating user info: $e");
+    }
+  }
+
+  // Retrieve user information by email
+  Future<Map<String, dynamic>?> getUserInfoByEmail(String email) async {
+    try {
+      QuerySnapshot snapshot = await userCollection
+          .where("email", isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs[0].data() as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("Error getting user info by email: $e");
+      return null;
+    }
+  }
   // get user UID by email
   Future<String?> getUidByEmail(String email) async {
     try {
@@ -33,10 +151,13 @@ class DatabaseService {
   }
 
   // saving the userdata
-  Future savingUserData(String fullName, String email) async {
+  Future savingUserData(String fullName, String email, String phn, String dpt, String design) async {
     return await userCollection.doc(uid).set({
       "fullName": fullName,
       "email": email,
+      "phn": phn,
+      "dpt": dpt,
+      "design": design,
       "groups": [],
       "tasks": [],
       "profilePic": "",
@@ -62,11 +183,12 @@ class DatabaseService {
 
   // creating a group
 // Modify the createGroup method to return groupDocumentReference
-  Future<DocumentReference> createGroup(String userName, String id, String groupName, String startDate, String dueDate, String stage, String owner, String desc) async {
+  Future<DocumentReference> createGroup(String userName, String id, String groupName, String startDate, String dueDate, String time, String stage, String owner, String desc) async {
     DocumentReference groupDocumentReference = await groupCollection.add({
       "groupName": groupName,
       "startDate": startDate,
       "dueDate": dueDate,
+      "time": time,
       "stage": stage,
       "owner": owner,
       "desc": desc,
@@ -87,7 +209,7 @@ class DatabaseService {
 
     DocumentReference userDocumentReference = userCollection.doc(uid);
     await userDocumentReference.update({
-      "groups": FieldValue.arrayUnion(["${groupDocumentReference.id}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_$desc"]),
+      "groups": FieldValue.arrayUnion(["${groupDocumentReference.id}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"]),
 
     });
 
@@ -95,7 +217,7 @@ class DatabaseService {
   }
 
   // creating a task
-  Future createTask(String userName, String id, String taskName, String startDate, String dueDate, String stage, String owner) async {
+  Future createTask(String userName, String id, String taskName, String startDate, String dueDate, String time, String stage, String owner, String desc) async {
     DocumentReference taskDocumentReference = await taskCollection.add({
       "taskName": taskName,
       "taskIcon": "",
@@ -108,6 +230,8 @@ class DatabaseService {
       "dueDate": dueDate,
       "stage": stage,
       "owner": owner,
+      "time":time,
+      "desc": desc,
     });
     // update the members
     await taskDocumentReference.update({
@@ -118,7 +242,7 @@ class DatabaseService {
     DocumentReference userDocumentReference = userCollection.doc(uid);
     return await userDocumentReference.update({
       "tasks":
-      FieldValue.arrayUnion(["${taskDocumentReference.id}_${taskName}_${startDate}_${dueDate}_${owner}_$stage"])
+      FieldValue.arrayUnion(["${taskDocumentReference.id}_${taskName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"])
     });
   }
 
@@ -156,8 +280,15 @@ class DatabaseService {
   }
 
   // get group members
-  getGroupMembers(groupId) async {
-    return groupCollection.doc(groupId).snapshots();
+   getGroupMembers(String groupId) {
+    return groupCollection.doc(groupId).snapshots().map((snapshot) {
+      if (snapshot.exists) {
+        List<dynamic> members = snapshot['members'] ?? [];
+        return members.cast<String>().toList();
+      } else {
+        return [];
+      }
+    });
   }
 
   // get task members
@@ -172,32 +303,6 @@ class DatabaseService {
     });
   }
 
-// Update task details in the database
-  Future updateTaskDetails(String taskId, String updatedTaskName) async {
-    DocumentReference taskDocumentReference = taskCollection.doc(taskId);
-
-    Map<String, dynamic> updatedData = {
-      'taskName': updatedTaskName,
-
-
-    };
-
-    await taskDocumentReference.update(updatedData);
-  }
-
-  Future updateGroupDetails(String groupId, String updatedGroupName) async {
-    DocumentReference groupDocumentReference = groupCollection.doc(groupId);
-
-    Map<String, dynamic> updatedData = {
-      'groupName': updatedGroupName,
-
-
-    };
-
-    await groupDocumentReference.update(updatedData);
-  }
-
-
 
 
   // search
@@ -207,30 +312,27 @@ class DatabaseService {
 
   // function -> bool
   Future<bool> isUserJoined(
-      String groupName, String groupId, String userName, String startDate, String dueDate, String owner, String stage, String desc) async {
+      String groupName, String groupId, String userName, String startDate, String dueDate, String time, String owner, String stage, String desc) async {
     DocumentReference userDocumentReference = userCollection.doc(uid);
     DocumentReference groupDocumentReference = groupCollection.doc(groupId);
     DocumentSnapshot documentSnapshot = await userDocumentReference.get();
 
     List<dynamic> groups = await documentSnapshot['groups'];
-    if (groups.contains("${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_$desc")) {
+    if (groups.contains("${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time")) {
       return true;
     } else {
       return false;
     }
   }
 
-
-
-
   Future<bool> isUserJoinedTask(
-      String taskName, String taskId, String userName, String startDate, String dueDate, String owner, String stage) async {
+      String taskName, String taskId, String userName, String startDate, String dueDate, String time,String owner, String stage, String desc) async {
     DocumentReference userDocumentReference = userCollection.doc(uid);
 
     DocumentSnapshot documentSnapshot = await userDocumentReference.get();
 
     List<dynamic> groups = await documentSnapshot['tasks'];
-    if (groups.contains("${taskId}_${taskName}_${startDate}_${dueDate}_${owner}_$stage")) {
+    if (groups.contains("${taskId}_${taskName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time")) {
       return true;
     } else {
       return false;
@@ -239,7 +341,7 @@ class DatabaseService {
 
   // toggling the group join/exit
   Future toggleGroupJoin(
-      String groupId, String userName, String groupName) async {
+      String groupId, String userName, String groupName, String startDate, String dueDate,String time, String stage,String owner, String desc) async {
     // doc reference
     DocumentReference userDocumentReference = userCollection.doc(uid);
     DocumentReference groupDocumentReference = groupCollection.doc(groupId);
@@ -248,16 +350,16 @@ class DatabaseService {
     List<dynamic> groups = await documentSnapshot['groups'];
 
     // if user has our groups -> then remove then or also in other part re join
-    if (groups.contains("${groupId}_$groupName")) {
+    if (groups.contains("${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time")) {
       await userDocumentReference.update({
-        "groups": FieldValue.arrayRemove(["${groupId}_$groupName"])
+        "groups": FieldValue.arrayRemove(["${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"])
       });
       await groupDocumentReference.update({
         "members": FieldValue.arrayRemove(["${uid}_$userName"])
       });
     } else {
       await userDocumentReference.update({
-        "groups": FieldValue.arrayUnion(["${groupId}_$groupName"])
+        "groups": FieldValue.arrayUnion(["${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"])
       });
       await groupDocumentReference.update({
         "members": FieldValue.arrayUnion(["${uid}_$userName"])
@@ -301,4 +403,26 @@ class DatabaseService {
       "recentMessageTime": chatMessageData['time'].toString(),
     });
   }
+
+  Future<List<Map<String, dynamic>>> getAllEmailsAndfullNames() async {
+    try {
+      QuerySnapshot snapshot = await userCollection.get();
+      List<Map<String, dynamic>> usersData = snapshot.docs
+          .map((doc) => {
+        'email': doc['email'] as String,
+        'fullName': doc['fullName'] as String,
+        'dpt':doc['dpt'] as String
+
+      })
+          .toList();
+      return usersData;
+    } catch (e) {
+      print("Error getting emails and names: $e");
+      return [];
+    }
+  }
+
+
+
+
 }

@@ -1,4 +1,3 @@
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:task/utils/local_images.dart';
@@ -22,6 +21,23 @@ class _RegisterPageState extends State<RegisterPage> {
   String email = "";
   String password = "";
   String fullName = "";
+  String phn ="";
+  String design = "";
+
+
+  String dpt = "Sales"; // Set a default value
+  List<String> designationOptions = [
+    "Sales",
+    "Marketing",
+    "Customer Service",
+    "Operations",
+    "Management",
+    "Finance",
+    "HR and Admin",
+    "Tech",
+  ];
+
+
   AuthService authService = AuthService();
   @override
   Widget build(BuildContext context) {
@@ -47,10 +63,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                      "Create your account now to help your collegues",
+                      "Create User Now To Grow Your Business",
                       style: TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w400)),
-                  Image.asset(LocalImages.icIntroduction),
+                  // Image.asset(LocalImages.icIntroduction),
+                  const SizedBox(height: 20),
                   TextFormField(
                     decoration: textInputDecoration.copyWith(
                         labelText: "Full Name",
@@ -74,6 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(
                     height: 15,
                   ),
+                  //email
                   TextFormField(
                     decoration: textInputDecoration.copyWith(
                         labelText: "Email",
@@ -97,6 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 15),
+                  //password
                   TextFormField(
                     obscureText: true,
                     decoration: textInputDecoration.copyWith(
@@ -121,6 +140,87 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(
                     height: 20,
                   ),
+                  //phone
+                  TextFormField(
+                    decoration: textInputDecoration.copyWith(
+                        labelText: "Phone",
+                        prefixIcon: Icon(
+                          Icons.phone,
+                          color: Theme.of(context).primaryColor,
+                        )),
+                    onChanged: (val) {
+                      setState(() {
+                        phn = val;
+                      });
+                    },
+                    validator: (val) {
+                      if (val!.isNotEmpty) {
+                        return null;
+                      } else {
+                        return "phone cannot be empty";
+                      }
+                    },
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  //department
+                  DropdownButtonFormField<String>(
+                    value: dpt,
+                    decoration: textInputDecoration.copyWith(
+                      labelText: "Department",
+                      prefixIcon: Icon(
+                        Icons.computer_sharp,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        dpt= val!;
+                      });
+                    },
+                    items: designationOptions.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    validator: (val) {
+                      if (val == null || val.isEmpty || val == "Option 1") {
+                        return "Please select a valid designation";
+                      } else {
+                        return null;
+                      }
+                    },
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  //designation
+                  TextFormField(
+                    decoration: textInputDecoration.copyWith(
+                        labelText: "Designation",
+                        prefixIcon: Icon(
+                          Icons.computer_sharp,
+                          color: Theme.of(context).primaryColor,
+                        )),
+                    onChanged: (val) {
+                      setState(() {
+                        design= val;
+                      });
+                    },
+                    validator: (val) {
+                      if (val!.isNotEmpty) {
+                        return null;
+                      } else {
+                        return "Designation cannot be empty";
+                      }
+                    },
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  //Register button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -130,7 +230,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30))),
                       child: const Text(
-                        "Register",
+                        "Create",
                         style:
                         TextStyle(color: Colors.white, fontSize: 16),
                       ),
@@ -142,22 +242,22 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(
                     height: 10,
                   ),
-                  Text.rich(TextSpan(
-                    text: "Already have an account? ",
-                    style: const TextStyle(
-                        color: Colors.black, fontSize: 14),
-                    children: <TextSpan>[
-                      TextSpan(
-                          text: "Login now",
-                          style: const TextStyle(
-                              color: Colors.black,
-                              decoration: TextDecoration.underline),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              nextScreen(context, const LoginPage());
-                            }),
-                    ],
-                  )),
+                  // Text.rich(TextSpan(
+                  //   text: "Already have an account? ",
+                  //   style: const TextStyle(
+                  //       color: Colors.black, fontSize: 14),
+                  //   children: <TextSpan>[
+                  //     TextSpan(
+                  //         text: "Login now",
+                  //         style: const TextStyle(
+                  //             color: Colors.black,
+                  //             decoration: TextDecoration.underline),
+                  //         recognizer: TapGestureRecognizer()
+                  //           ..onTap = () {
+                  //             nextScreen(context, const LoginPage());
+                  //           }),
+                  //   ],
+                  // )),
                 ],
               )),
         ),
@@ -171,14 +271,26 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
       await authService
-          .registerUserWithEmailandPassword(fullName, email, password)
+          .registerUserWithEmailandPassword(fullName, email, password, phn, dpt, design)
           .then((value) async {
         if (value == true) {
           // saving the shared preference state
           await HelperFunctions.saveUserLoggedInStatus(true);
-          await HelperFunctions.saveUserEmailSF(email);
           await HelperFunctions.saveUserNameSF(fullName);
-          nextScreenReplace(context,  const WelComeView());
+          await HelperFunctions.saveUserEmailSF(email);
+          await HelperFunctions.saveUserPhoneSF(phn);
+          await HelperFunctions.saveUserDptSF(dpt);
+          await HelperFunctions.saveUserDesignSF(design);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('User created successfully, reopen the app to restore the admin account'),
+              duration: Duration(seconds: 6),
+            ),
+          );
+
+          // Navigate back to the previous screen (AllUsers)
+          Navigator.pop(context);
         } else {
           showSnackbar(context, Colors.red, value);
           setState(() {

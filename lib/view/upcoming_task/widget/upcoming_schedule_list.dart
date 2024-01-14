@@ -1,9 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:task/utils/common_colors.dart';
-import 'package:task/utils/local_images.dart';
 import 'package:task/utils/text_style.dart';
-import 'package:task/view/create_task/create_task_view.dart';
 import 'package:task/widget/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,33 +21,7 @@ class UpcomingScheduleListView extends StatefulWidget {
 }
 
 class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
-  List onBorderingData = [
-    {
-      "image": LocalImages.icUIDesign,
-      "taskText": "UI Design",
-      "taskTime": "09:00 AM To 11:00 AM",
-    },
-    {
-      "image": LocalImages.icAppDev,
-      "taskText": "App Development",
-      "taskTime": "12:30 PM To 02:00 PM",
-    },
-    {
-      "image": LocalImages.icWebDev,
-      "taskText": "Web Development",
-      "taskTime": "04:00 PM To 06:00 PM",
-    },
-    {
-      "image": LocalImages.icDeshBoard,
-      "taskText": "Dashboard Design",
-      "taskTime": "09:00 PM To 10:00 PM",
-    },
-    {
-      "image": LocalImages.icAccounting,
-      "taskText": "Accounting",
-      "taskTime": "11:00 PM To 11:45 PM",
-    },
-  ];
+
   String userName = "";
   String email = "";
   AuthService authService = AuthService();
@@ -63,6 +35,8 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
   String taskName = "";
   String desc = "";
 
+  String time = "";
+
   List<GroupTile> groupTilesList = [];
   String _selectedGroupId = "";
   List<String> deletedTileIds = [];
@@ -75,6 +49,28 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
     loadDeletedTiles();
     loadEmails();
   }
+
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        if (isStartDate) {
+          startDate = selectedDate.toLocal().toString();
+        } else {
+          dueDate = selectedDate.toLocal().toString();
+        }
+      });
+    }
+  }
+
+
 
   // Add this method to fetch emails
   void loadEmails() async {
@@ -169,6 +165,15 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
     }
   }
 
+  String getTime(String input) {
+    List<String> parts = input.split('_');
+    if (parts.length >= 8) {
+      return parts[7];
+    } else {
+      return '';
+    }
+  }
+
 
   gettingUserData() async {
     await HelperFunctions.getUserEmailFromSF().then((value) {
@@ -203,7 +208,7 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Schedule ",
+                "Schedule Projects ",
                 style: CommonStyle.getRalewayFont(
                   color: CommonColors.blackColor,
                   fontWeight: FontWeight.w700,
@@ -268,12 +273,13 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
                   stage: getStage(groupName),
                   owner:getOwner(groupName),
                   desc: getDesc(groupName),
+                  time: getTime(groupName),
                   onAddMember: () {
                     _showAddMemberDialog(context, getId(groupName));
                   },
-                      onDelete: (){
-                        _deleteGroup(getId(groupName));
-                      },
+                  onDelete: (){
+                    _deleteGroup(getId(groupName));
+                  },
                 ),
               )
                   .toList();
@@ -305,184 +311,210 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
 
 
   popUpDialog(BuildContext context) {
-
     showDialog(
       barrierDismissible: false,
       context: context,
       builder: (context) {
         return StatefulBuilder(builder: ((context, setState) {
-          return AlertDialog(
-            title: const Text(
-              "Create a Project",
-              textAlign: TextAlign.left,
-            ),
+          return SizedBox(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: AlertDialog(
+              title: const Text(
+                "Create a Project",
+                textAlign: TextAlign.left,
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _isLoading == true
+                          ? Center(
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      )
+                          : TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            groupName = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Project Name',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          // other decoration properties...
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                      readOnly: true,
+                      onTap: () => _selectDate(context, true),
+                      controller: TextEditingController(text: startDate),
+                      style: const TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                      labelText: 'Start Date',
+                      enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                      color: Theme.of(context).primaryColor),
+                      borderRadius: BorderRadius.circular(20),
+                      ),
+                      ),
+                      ),
+                      const SizedBox(height: 10),
+          TextField(
+          readOnly: true,
+          onTap: () => _selectDate(context, false),
+          controller: TextEditingController(text: dueDate),
+          style: const TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+          labelText: 'Due Date',
+          enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+          color: Theme.of(context).primaryColor),
+          borderRadius: BorderRadius.circular(20),
+          ),
+          ),
+          ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            time = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Estimated Time(in hours)',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          // other decoration properties...
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: stage.isNotEmpty ? stage : "TODO", // Set a default value if stage is empty
+                        onChanged: (val) {
+                          setState(() {
+                            stage = val!;
+                          });
+                        },
+                        items: ["TODO", "In Progress", "Completed", "Pending"].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Stage',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          // other decoration properties...
+                        ),
+                      ),
 
-            content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.98, // Set width here
-              height: MediaQuery.of(context).size.height * 0.98,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _isLoading == true
-                        ? Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    )
-                        : TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          groupName = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Project Name',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                      const SizedBox(height: 10),
+                      TextField(
+                        onChanged: (val) {
+                          setState(() {
+                            owner = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Project Owner',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          // other decoration properties...
                         ),
-                        // other decoration properties...
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          startDate = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Start Date',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
+                      const SizedBox(height: 10),
+                      TextField(
+
+                        onChanged: (val) {
+                          setState(() {
+                            desc = val;
+                          });
+                        },
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Description',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(vertical: 50),
+                          // other decoration properties...
                         ),
-                        // other decoration properties...
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                        dueDate = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Due Date',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        // other decoration properties...
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          stage = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Stage',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        // other decoration properties...
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          owner = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Created by',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        // other decoration properties...
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      onChanged: (val) {
-                        setState(() {
-                          desc = val;
-                        });
-                      },
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Description',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        // other decoration properties...
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red),
-                child: const Text("CANCEL"),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (groupName != "" && startDate!="" && dueDate!= "" && owner!="" && stage!="" && desc!="") {
-                    setState(() {
-                      _isLoading = true;
-                    });
-                    await DatabaseService(
-                      uid: FirebaseAuth.instance.currentUser!.uid,
-                    ).createGroup(
-                      userName,
-                      FirebaseAuth.instance.currentUser!.uid,
-                      groupName,
-                      startDate,
-                      dueDate,
-                      stage,
-                      owner,
-                      desc
-                    ).whenComplete(() {
-                      _isLoading = false;
-                    });
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
                     Navigator.of(context).pop();
-                    showSnackbar(
-                      context,
-                      Colors.green,
-                      "Project created successfully.",
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red),
-                child: const Text("CREATE"),
-              )
-            ],
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red),
+                  child: const Text("CANCEL"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (groupName != "" && startDate!="" && dueDate!= "" && time!="" && owner!="" && stage!="" && desc!="") {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      await DatabaseService(
+                        uid: FirebaseAuth.instance.currentUser!.uid,
+                      ).createGroup(
+                          userName,
+                          FirebaseAuth.instance.currentUser!.uid,
+                          groupName,
+                          startDate,
+                          dueDate,
+                          time,
+                          stage,
+                          owner,
+                          desc
+                      ).whenComplete(() {
+                        _isLoading = false;
+                      });
+                      Navigator.of(context).pop();
+                      showSnackbar(
+                        context,
+                        Colors.green,
+                        "Project created successfully.",
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red),
+                  child: const Text("CREATE"),
+                )
+              ],
+            ),
           );
         }));
       },
@@ -521,76 +553,95 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
 
   // Modify your _showAddMemberDialog method
   void _showAddMemberDialog(BuildContext context, String groupId) {
-    TextEditingController emailController = TextEditingController();
-    List<String> uniqueEmails = emails.toSet().toList(); // Remove duplicates
-
-    String selectedEmail = uniqueEmails.isNotEmpty ? uniqueEmails[0] : ''; // Set default value
-
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Member"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Modify this TextField to a DropdownButtonFormField
-              DropdownButtonFormField<String>(
-                value: selectedEmail,
-                onChanged: (value) {
-                  setState(() {
-                    selectedEmail = value!;
-                  });
-                },
-                items: uniqueEmails.map<DropdownMenuItem<String>>((String email) {
-                  return DropdownMenuItem<String>(
-                    value: email,
-                    child: Text(email),
-                  );
-                }).toList(),
-                decoration: InputDecoration(
-                  labelText: 'Email',
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: DatabaseService().getAllEmailsAndfullNames(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text("Error: ${snapshot.error}");
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Text("No data available");
+            } else {
+              List<Map<String, dynamic>> usersData = snapshot.data!;
+              String selectedEmail = usersData.isNotEmpty ? usersData[0]['email'] : '';
+
+              return AlertDialog(
+                title: const Text("Add Member"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedEmail,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedEmail = value!;
+                        });
+                      },
+                      items: usersData.map<DropdownMenuItem<String>>((userData) {
+                        return DropdownMenuItem<String>(
+                          value: userData['email'],
+                          child: Text("${userData['fullName']}"),
+                        );
+                      }).toList(),
+                      decoration: InputDecoration(
+                        labelText: 'Member',
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (selectedEmail.isNotEmpty) {
-                  bool memberAdded = await addMemberToGroup(groupName, selectedEmail,startDate,dueDate,stage,owner,desc);
+                actions: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (selectedEmail.isNotEmpty) {
+                        bool memberAdded = await addMemberToGroup(
+                          groupId,
+                          selectedEmail,
+                          startDate,
+                          dueDate,
+                          stage,
+                          owner,
+                          desc,
+                          time
+                        );
 
-                  if (memberAdded) {
-                    // Show a Snackbar if the member is added successfully
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Member added successfully."),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                        if (memberAdded) {
+                          // Show a Snackbar if the member is added successfully
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Member added successfully."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
 
-                    // Close the dialog
-                    Navigator.of(context).pop();
-                  } else {
-                    // Handle failure, e.g., show an error message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Failed to add member."),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text("Add"),
-            ),
-          ],
+                          // Close the dialog
+                          Navigator.of(context).pop();
+                        } else {
+                          // Handle failure, e.g., show an error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Failed to add member."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Add"),
+                  ),
+                ],
+              );
+            }
+          },
         );
       },
     );
@@ -598,7 +649,8 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
 
 
 
-  Future<bool> addMemberToGroup(String groupId, String email,String startDate, String dueDate, String owner, String desc, String stage) async {
+
+  Future<bool> addMemberToGroup(String groupId, String email,String startDate, String dueDate,String time, String owner, String desc, String stage) async {
     try {
       // Fetch the user UID based on the provided email
       String? newMemberUid = await DatabaseService().getUidByEmail(email);
@@ -606,14 +658,15 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
       if (newMemberUid != null) {
         // Use the obtained UID to add the user to the group
         await DatabaseService(uid: newMemberUid).createGroup(
-          userName,
-          newMemberUid,
-          groupName,
-          startDate,
-          dueDate,
-          owner,
-          stage,
-          desc
+            userName,
+            newMemberUid,
+            groupName,
+            startDate,
+            dueDate,
+            time,
+            owner,
+            stage,
+            desc
         );
 
         return true;
