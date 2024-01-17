@@ -43,6 +43,7 @@ class _HomeViewState extends State<HomeView> {
   String selectedGroupName = ""; // New variable for selected group name
   List<String> groupNames = [];
   List<String> emails = [];
+  List<String> fullNames = [];  // Add your fullNames here
 
   @override
   void initState() {
@@ -102,9 +103,6 @@ class _HomeViewState extends State<HomeView> {
       print("Error fetching group names: $e");
     }
   }
-
-
-
 
 
   Future<void> saveDeletedTiles(List<String> deletedTileIds) async {
@@ -689,7 +687,7 @@ class _HomeViewState extends State<HomeView> {
                       items: usersData.map<DropdownMenuItem<String>>((userData) {
                         return DropdownMenuItem<String>(
                           value: userData['email'],
-                          child: Text("${userData['fullName']} "),
+                          child: Text("${userData['fullName']}"),
                         );
                       }).toList(),
                       decoration: InputDecoration(
@@ -707,38 +705,57 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      if (selectedEmail.isNotEmpty) {
-                        bool memberAdded = await addMemberToTask(
-                          taskId,
-                          selectedEmail,
-                          startDate,
-                          dueDate,
-                          time,
-                          stage,
-                          owner,
-                          desc,
-                        );
+                      // Fetch the UID of the selected member based on their email
+                      String? newMemberUid = await DatabaseService().getUidByEmail(selectedEmail);
 
-                        if (memberAdded) {
-                          // Show a Snackbar if the member is added successfully
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Member added successfully."),
-                              duration: Duration(seconds: 2),
-                            ),
+                      if (newMemberUid != null) {
+                        try {
+                          // Use the obtained UID to add the user to the group
+                          await addMemberToTask(
+                            taskId,
+                            newMemberUid,
+                            taskName,
+                            startDate,
+                            dueDate,
+                            time,
+                            owner,
+                            stage,
+                            desc,
                           );
 
-                          // Close the dialog
+                          // Update the UI by calling setState
+                          setState(() {
+                            // Add the new member to the existing GroupTile widget
+                            taskTilesList.add(
+                              TaskTile(
+                                taskId: taskId,
+                                taskName: taskName,
+                                userName: selectedEmail,
+                                startDate: startDate,
+                                dueDate: dueDate,
+                                stage: stage,
+                                owner: owner,
+                                desc: desc,
+                                time: time,
+                                selectedGroupName: selectedGroupName,
+                                onAddMember: () {
+                                  _showAddMemberDialog(context, taskId);
+                                },
+                                onDelete: () {
+                                  _deleteTask(taskId);
+                                },
+                              ),
+                            );
+                          });
+
                           Navigator.of(context).pop();
-                        } else {
-                          // Handle failure, e.g., show an error message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Failed to add member."),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          showSnackbar(context, Colors.green, "Member added successfully.");
+                        } catch (e) {
+                          print("Error adding member to group: $e");
+                          // Handle the error as needed
                         }
+                      } else {
+                        print("User with email $selectedEmail not found");
                       }
                     },
                     child: const Text("Add"),
@@ -754,34 +771,45 @@ class _HomeViewState extends State<HomeView> {
 
 
 
-  Future<bool> addMemberToTask(String taskId, String email,String startDate, String dueDate, String time,String owner, String stage,String desc) async {
+  Future<void> addMemberToTask(
+      String taskId,
+      String memberId,
+      String groupName,
+      String startDate,
+      String dueDate,
+      String time,
+      String owner,
+      String stage,
+      String desc,
+      ) async {
     try {
-      // Fetch the user UID based on the provided email
-      String? newMemberUid = await DatabaseService().getUidByEmail(email);
+      DocumentReference taskRef = DatabaseService().taskCollection.doc(taskId);
 
-      if (newMemberUid != null) {
-        // Use the obtained UID to add the user to the group
-        await DatabaseService(uid: newMemberUid).createTask(
-          userName,
-          newMemberUid,
-          taskName,
-          stage,
-          startDate,
-          dueDate,
-          time,
-          owner,
-          desc
-        );
+      // Get the admin UID from the admin field
+      String adminUid = await DatabaseService().getTaskAdmin(taskId);
 
-        return true;
-      } else {
-        print("User with email $email not found");
-        return false;
-      }
+      await taskRef.update({
+        'members': FieldValue.arrayUnion([adminUid, memberId]),
+      });
+
+      // Add the group tile to the member's collection
+      await DatabaseService().userCollection.doc(memberId).collection('tasks').doc(taskId).set({
+        'taskName': taskName,
+        'startDate': startDate,
+        'dueDate': dueDate,
+        'time': time,
+        'owner': owner,
+        'stage': stage,
+        'desc': desc,
+      });
+
+      // Update the groups field in the member's document
+      await DatabaseService().userCollection.doc(memberId).update({
+        'tasks': FieldValue.arrayUnion(["${taskId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"]),
+      });
     } catch (e) {
-      print("Error adding member: $e");
-      return false;
+      print("Error adding member to group: $e");
+      throw e;
     }
   }
-
 }

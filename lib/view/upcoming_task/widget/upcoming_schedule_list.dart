@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:task/utils/common_colors.dart';
@@ -21,7 +22,7 @@ class UpcomingScheduleListView extends StatefulWidget {
 }
 
 class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
-
+  User? user;
   String userName = "";
   String email = "";
   AuthService authService = AuthService();
@@ -34,7 +35,7 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
   String owner ="";
   String taskName = "";
   String desc = "";
-
+  bool isJoined = false;
   String time = "";
 
   List<GroupTile> groupTilesList = [];
@@ -48,8 +49,16 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
     gettingUserData();
     loadDeletedTiles();
     loadEmails();
+    getCurrentUserIdandName();
   }
-
+  getCurrentUserIdandName() async {
+    await HelperFunctions.getUserNameFromSF().then((value) {
+      setState(() {
+        userName = value!;
+      });
+    });
+    user = FirebaseAuth.instance.currentUser;
+  }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     DateTime? selectedDate = await showDatePicker(
@@ -199,6 +208,17 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
 
   @override
   Widget build(BuildContext context) {
+    joinedOrNot(
+        String userName, String groupId, String groupName, String admin) async {
+      await DatabaseService(uid: user!.uid)
+          .isUserJoined(groupName, groupId, userName,startDate,dueDate,stage,owner,time,desc)
+          .then((value) {
+        setState(() {
+          isJoined = value;
+        });
+      });
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -356,34 +376,34 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                      readOnly: true,
-                      onTap: () => _selectDate(context, true),
-                      controller: TextEditingController(text: startDate),
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                      labelText: 'Start Date',
-                      enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                      color: Theme.of(context).primaryColor),
-                      borderRadius: BorderRadius.circular(20),
-                      ),
-                      ),
+                        readOnly: true,
+                        onTap: () => _selectDate(context, true),
+                        controller: TextEditingController(text: startDate),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Start Date',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 10),
-          TextField(
-          readOnly: true,
-          onTap: () => _selectDate(context, false),
-          controller: TextEditingController(text: dueDate),
-          style: const TextStyle(color: Colors.black),
-          decoration: InputDecoration(
-          labelText: 'Due Date',
-          enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-          color: Theme.of(context).primaryColor),
-          borderRadius: BorderRadius.circular(20),
-          ),
-          ),
-          ),
+                      TextField(
+                        readOnly: true,
+                        onTap: () => _selectDate(context, false),
+                        controller: TextEditingController(text: dueDate),
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          labelText: 'Due Date',
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       TextField(
                         onChanged: (val) {
@@ -552,6 +572,7 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
   }
 
   // Modify your _showAddMemberDialog method
+// Modify your _showAddMemberDialog method
   void _showAddMemberDialog(BuildContext context, String groupId) {
     showDialog(
       context: context,
@@ -602,38 +623,56 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      if (selectedEmail.isNotEmpty) {
-                        bool memberAdded = await addMemberToGroup(
-                          groupId,
-                          selectedEmail,
-                          startDate,
-                          dueDate,
-                          stage,
-                          owner,
-                          desc,
-                          time
-                        );
+                      // Fetch the UID of the selected member based on their email
+                      String? newMemberUid = await DatabaseService().getUidByEmail(selectedEmail);
 
-                        if (memberAdded) {
-                          // Show a Snackbar if the member is added successfully
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Member added successfully."),
-                              duration: Duration(seconds: 2),
-                            ),
+                      if (newMemberUid != null) {
+                        try {
+                          // Use the obtained UID to add the user to the group
+                          await addMemberToGroup(
+                            groupId,
+                            newMemberUid,
+                            groupName,
+                            startDate,
+                            dueDate,
+                            time,
+                            owner,
+                            stage,
+                            desc,
                           );
 
-                          // Close the dialog
+                          // Update the UI by calling setState
+                          setState(() {
+                            // Add the new member to the existing GroupTile widget
+                            groupTilesList.add(
+                              GroupTile(
+                                groupId: groupId,
+                                groupName: groupName,
+                                userName: selectedEmail,
+                                startDate: startDate,
+                                dueDate: dueDate,
+                                stage: stage,
+                                owner: owner,
+                                desc: desc,
+                                time: time,
+                                onAddMember: () {
+                                  _showAddMemberDialog(context, groupId);
+                                },
+                                onDelete: () {
+                                  _deleteGroup(groupId);
+                                },
+                              ),
+                            );
+                          });
+
                           Navigator.of(context).pop();
-                        } else {
-                          // Handle failure, e.g., show an error message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Failed to add member."),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          showSnackbar(context, Colors.green, "Member added successfully.");
+                        } catch (e) {
+                          print("Error adding member to group: $e");
+                          // Handle the error as needed
                         }
+                      } else {
+                        print("User with email $selectedEmail not found");
                       }
                     },
                     child: const Text("Add"),
@@ -647,38 +686,47 @@ class _UpcomingScheduleListViewState extends State<UpcomingScheduleListView> {
     );
   }
 
-
-
-
-  Future<bool> addMemberToGroup(String groupId, String email,String startDate, String dueDate,String time, String owner, String desc, String stage) async {
+// Move the addMemberToGroup method outside the widget
+  Future<void> addMemberToGroup(
+      String groupId,
+      String memberId,
+      String groupName,
+      String startDate,
+      String dueDate,
+      String time,
+      String owner,
+      String stage,
+      String desc,
+      ) async {
     try {
-      // Fetch the user UID based on the provided email
-      String? newMemberUid = await DatabaseService().getUidByEmail(email);
+      DocumentReference groupRef = DatabaseService().groupCollection.doc(groupId);
 
-      if (newMemberUid != null) {
-        // Use the obtained UID to add the user to the group
-        await DatabaseService(uid: newMemberUid).createGroup(
-            userName,
-            newMemberUid,
-            groupName,
-            startDate,
-            dueDate,
-            time,
-            owner,
-            stage,
-            desc
-        );
+      // Get the admin UID from the admin field
+      String adminUid = await DatabaseService().getGroupAdmin(groupId);
 
-        return true;
-      } else {
-        print("User with email $email not found");
-        return false;
-      }
+      await groupRef.update({
+        'members': FieldValue.arrayUnion([adminUid, memberId]),
+      });
+
+      // Add the group tile to the member's collection
+      await DatabaseService().userCollection.doc(memberId).collection('groups').doc(groupId).set({
+        'groupName': groupName,
+        'startDate': startDate,
+        'dueDate': dueDate,
+        'time': time,
+        'owner': owner,
+        'stage': stage,
+        'desc': desc,
+      });
+
+      // Update the groups field in the member's document
+      await DatabaseService().userCollection.doc(memberId).update({
+        'groups': FieldValue.arrayUnion(["${groupId}_${groupName}_${startDate}_${dueDate}_${owner}_${stage}_${desc}_$time"]),
+      });
     } catch (e) {
-      print("Error adding member: $e");
-      return false;
+      print("Error adding member to group: $e");
+      throw e;
     }
   }
-
 
 }
