@@ -32,7 +32,15 @@ class DatabaseService {
     }
   }
 
+  Future<void> deleteGroup(String groupId) async {
+    await _firestore.collection('groups').doc(groupId).delete();
+  }
 
+  Future<void> removeGroupFromUser(String userName, String groupId) async {
+    await _firestore.collection('users').doc(userName).update({
+      'groups': FieldValue.arrayRemove([groupId]),
+    });
+  }
   Future<void> updateGroupDetails(
       String groupId,
       String groupName,
