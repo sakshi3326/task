@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "448134546678",
-    "project_id": "taskmanageapp-3d590",
-    "storage_bucket": "taskmanageapp-3d590.appspot.com"
+    "project_number": "302522249063",
+    "project_id": "buddy-35a81",
+    "storage_bucket": "buddy-35a81.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:448134546678:android:7812cd64b666801797d8d7",
+        "mobilesdk_app_id": "1:302522249063:android:2daa11bb9f5b6d69d189c2",
         "android_client_info": {
-          "package_name": "com.example.task"
+          "package_name": "com.rpadg.buddy"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBcHDWorg0TyZ6A7ngX7ZIL3OmCr4lV1tA"
+          "current_key": "AIzaSyCF4OFddZLi7dDAfGSZz_s6MSigP96xw08"
         }
       ],
       "services": {
