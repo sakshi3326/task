@@ -1,18 +1,16 @@
-# task
+# Buddy
 
 A new Flutter project.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### To change admin email:
+step 1 : go into root directory -> lib -> view -> allUsers -> allUsers.dart
+step 2 : at line no. 19 change the specificUserEmail and save the code.
 
-A few resources to get you started if this is your first Flutter project:
+#### Generate android apk commands
+flutter build apk --release
+find your apk inside root directory -> build -> app -> outputs -> flutter-apk -> app-release.apk
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-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
+##### Generate ios ipa release command
+flutter build ios --release
